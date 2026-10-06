@@ -54,7 +54,7 @@ export async function generateWithGemini(opts: GenerateOptions): Promise<string>
     generationConfig.responseSchema = opts.responseSchema;
   }
 
-  const candidateModels = Array.from(new Set([GEMINI_MODEL, 'gemini-3.7-flash', 'gemini-3-flash']));
+  const candidateModels = Array.from(new Set([GEMINI_MODEL, 'gemini-3.7-flash', 'gemini-1.5-flash']));
   let lastErr: GeminiError | null = null;
 
   for (const model of candidateModels) {
