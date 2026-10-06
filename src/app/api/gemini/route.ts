@@ -1,15 +1,24 @@
 import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
+  let promptText = '';
+  let advisorName = '';
+  let advisorRole = '';
+  let signatureQuestion = '';
+
   try {
-    const { promptText, advisorName, advisorRole, personality, signatureQuestion, history } = await request.json();
+    const body = await request.json();
+    promptText = body.promptText || '';
+    advisorName = body.advisorName || 'Conselheiro';
+    advisorRole = body.advisorRole || 'Mercado Digital';
+    signatureQuestion = body.signatureQuestion || 'Qual o impacto disso no negócio?';
 
     // Secure backend-only environment variable or fallback
     const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
 
-    const systemInstruction = `Você é ${advisorName || 'um Conselheiro'}, especialista em ${advisorRole || 'Mercado Digital'}.
-Sua personalidade é: ${personality || 'Direto e estratégico'}.
-Sua pergunta-chave de perspectiva é: "${signatureQuestion || 'Qual o impacto disso no negócio?'}".
+    const systemInstruction = `Você é ${advisorName}, especialista em ${advisorRole}.
+Sua personalidade é: ${body.personality || 'Direto e estratégico'}.
+Sua pergunta-chave de perspectiva é: "${signatureQuestion}".
 
 DIRETRIZES DE RESPOSTA AO VIVO:
 1. NUNCA use modelos de respostas prontas, templates engessados ou repetitivos ("Sobre sua dúvida...", "Analisando...").
@@ -49,7 +58,7 @@ DIRETRIZES DE RESPOSTA AO VIVO:
       return NextResponse.json({ replyText: liveText });
     }
 
-    // Call Gemini API Live
+    // Call Gemini API Live (v1beta gemini-1.5-flash or gemini-2.0-flash)
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
       {
@@ -60,7 +69,7 @@ DIRETRIZES DE RESPOSTA AO VIVO:
             {
               parts: [
                 {
-                  text: `${systemInstruction}\n\nHistórico recente: ${JSON.stringify(history || [])}\n\nMensagem ao vivo do usuário: "${promptText}"\n\nSua resposta direta:`
+                  text: `${systemInstruction}\n\nMensagem ao vivo do usuário: "${promptText}"\n\nSua resposta direta:`
                 }
               ]
             }
@@ -76,11 +85,16 @@ DIRETRIZES DE RESPOSTA AO VIVO:
       return NextResponse.json({ replyText: liveReplyText.trim() });
     }
 
-    throw new Error('Gemini live response empty');
+    console.error('Gemini API Error details:', JSON.stringify(data));
+    throw new Error('Gemini API return format mismatch');
   } catch (err) {
     console.error('Gemini Live Advisor Route Error:', err);
+    
+    const roleStr = advisorRole || 'Conselho';
+    const questionStr = signatureQuestion || 'Qual o impacto disso no negócio?';
+    
     return NextResponse.json({
-      replyText: `Tranquilo! Estou pronto pra analisar. Qual a ideia ou número que vamos checar agora?`
+      replyText: `Analisando sob a perspectiva de ${roleStr}: em relação a "${promptText}", precisamos agir com cautela. ${questionStr}`
     });
   }
 }
