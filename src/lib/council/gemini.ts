@@ -45,7 +45,6 @@ export async function generateWithGemini(opts: GenerateOptions): Promise<string>
   }
 
   const generationConfig: Record<string, unknown> = {
-    // Teto alto de propósito: o tamanho curto vem do prompt, não de truncar a saída.
     maxOutputTokens: opts.maxOutputTokens ?? 8192,
     thinkingConfig: { thinkingLevel: process.env.GEMINI_THINKING_LEVEL || 'low' },
   };
@@ -55,39 +54,50 @@ export async function generateWithGemini(opts: GenerateOptions): Promise<string>
     generationConfig.responseSchema = opts.responseSchema;
   }
 
-  const res = await fetch(`${API_BASE}/${GEMINI_MODEL}:generateContent`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      // Chave no header (não na URL) para não aparecer em logs de requisição.
-      'x-goog-api-key': apiKey,
-    },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: opts.systemInstruction }] },
-      contents: opts.contents,
-      generationConfig,
-    }),
-    cache: 'no-store',
-  });
+  const candidateModels = Array.from(new Set([GEMINI_MODEL, 'gemini-3.7-flash', 'gemini-3-flash']));
+  let lastErr: GeminiError | null = null;
 
-  const data = await res.json().catch(() => null);
+  for (const model of candidateModels) {
+    const res = await fetch(`${API_BASE}/${model}:generateContent`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey,
+      },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: opts.systemInstruction }] },
+        contents: opts.contents,
+        generationConfig,
+      }),
+      cache: 'no-store',
+    });
 
-  if (!res.ok) {
-    const msg = data?.error?.message || `HTTP ${res.status}`;
-    throw new GeminiError(`Gemini (${GEMINI_MODEL}): ${msg}`, res.status);
+    const data = await res.json().catch(() => null);
+
+    if (!res.ok) {
+      const msg = data?.error?.message || `HTTP ${res.status}`;
+      lastErr = new GeminiError(`Gemini (${model}): ${msg}`, res.status);
+      if (res.status === 503 || res.status === 429) {
+        continue;
+      }
+      throw lastErr;
+    }
+
+    const candidate = data?.candidates?.[0];
+    const parts: GeminiPart[] = candidate?.content?.parts ?? [];
+    const text = parts
+      .filter((p) => !p.thought && typeof p.text === 'string')
+      .map((p) => p.text)
+      .join('');
+
+    if (!text.trim()) {
+      const reason = candidate?.finishReason ?? data?.promptFeedback?.blockReason ?? 'desconhecido';
+      lastErr = new GeminiError(`Gemini (${model}) devolveu resposta vazia (motivo: ${reason}).`, 502);
+      continue;
+    }
+
+    return text;
   }
 
-  const candidate = data?.candidates?.[0];
-  const parts: GeminiPart[] = candidate?.content?.parts ?? [];
-  const text = parts
-    .filter((p) => !p.thought && typeof p.text === 'string')
-    .map((p) => p.text)
-    .join('');
-
-  if (!text.trim()) {
-    const reason = candidate?.finishReason ?? data?.promptFeedback?.blockReason ?? 'desconhecido';
-    throw new GeminiError(`Gemini (${GEMINI_MODEL}) devolveu resposta vazia (motivo: ${reason}).`, 502);
-  }
-
-  return text;
+  throw lastErr || new GeminiError('Nenhum modelo Gemini respondeu no momento.', 503);
 }
