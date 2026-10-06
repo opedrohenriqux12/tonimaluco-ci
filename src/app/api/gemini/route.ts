@@ -13,8 +13,8 @@ export async function POST(request: Request) {
     advisorRole = body.advisorRole || 'Mercado Digital';
     signatureQuestion = body.signatureQuestion || 'Qual o impacto disso no negócio?';
 
-    // Secure backend-only environment variable or fallback
-    const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+    // Secure backend-only environment variable
+    const apiKey = process.env.GEMINI_API_KEY;
 
     const systemInstruction = `Você é ${advisorName}, especialista em ${advisorRole}.
 Sua personalidade é: ${body.personality || 'Direto e estratégico'}.
