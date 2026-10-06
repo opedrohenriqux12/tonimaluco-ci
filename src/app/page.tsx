@@ -228,14 +228,26 @@ export default function Home() {
 
               {/* Products List */}
               <div className="space-y-4">
-                {filteredProducts.map((product) => (
-                  <ProductCard
-                    key={product.id}
-                    product={product}
-                    onAskToni={handleAskToni}
-                    onConsultCouncil={handleAskToni}
-                  />
-                ))}
+                {filteredProducts.length === 0 ? (
+                  <div className="gestoria-card p-10 text-center space-y-3">
+                    <span className="text-[#00D4FF] font-mono-custom text-sm font-bold block">
+                      Balança Zerada
+                    </span>
+                    <h4 className="text-lg font-bold text-white">Nenhum produto cadastrado na Central de Decisão</h4>
+                    <p className="text-xs text-white/60 max-w-md mx-auto">
+                      Vá até os módulos <strong className="text-[#00D4FF]">Tendências</strong> ou <strong className="text-[#00D4FF]">Radar</strong> e clique em <em>"Transformar em Oportunidade"</em> para enviar análises para o Dashboard.
+                    </p>
+                  </div>
+                ) : (
+                  filteredProducts.map((product) => (
+                    <ProductCard
+                      key={product.id}
+                      product={product}
+                      onAskToni={handleAskToni}
+                      onConsultCouncil={handleAskToni}
+                    />
+                  ))
+                )}
               </div>
             </div>
           )}
