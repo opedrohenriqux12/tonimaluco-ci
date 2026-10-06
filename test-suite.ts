@@ -1,5 +1,5 @@
-import { generateWithGemini, GEMINI_MODEL } from '../src/lib/council/gemini';
-import { runIndividualTurn, runGroupTurn, type RoomMessage } from '../src/lib/council/orchestrator';
+import { generateWithGemini, GEMINI_MODEL } from '@/lib/council/gemini';
+import { runIndividualTurn, runGroupTurn, type RoomMessage } from '@/lib/council/orchestrator';
 
 // Script para executar a suíte de 10 testes de aceitação localmente contra as rotas ou chamando o módulo.
 // Executar com: npx tsx test-suite.ts
