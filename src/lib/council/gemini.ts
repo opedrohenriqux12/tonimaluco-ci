@@ -6,10 +6,10 @@
  * mascarar com uma frase pronta (foi isso que escondeu o 404 de modelo descontinuado).
  */
 
-const API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
+const API_BASE = 'https://generativelanguage.googleapis.com/v1/models';
 
 /** Modelo configurável por env (GEMINI_MODEL) sem precisar mexer no código. */
-export const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+export const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
 
 export interface GeminiContent {
   role: 'user' | 'model';
@@ -53,7 +53,7 @@ export async function generateWithGemini(opts: GenerateOptions): Promise<string>
     generationConfig.responseSchema = opts.responseSchema;
   }
 
-  const candidateModels = Array.from(new Set([GEMINI_MODEL, 'gemini-1.5-flash-8b']));
+  const candidateModels = Array.from(new Set([GEMINI_MODEL, 'gemini-1.5-flash-latest', 'gemini-2.0-flash-lite']));
   let lastErr: GeminiError | null = null;
 
   for (const model of candidateModels) {
