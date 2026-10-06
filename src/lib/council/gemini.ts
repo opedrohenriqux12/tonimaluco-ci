@@ -9,7 +9,7 @@
 const API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 
 /** Modelo configurável por env (GEMINI_MODEL) sem precisar mexer no código. */
-export const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
+export const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
 
 export interface GeminiContent {
   role: 'user' | 'model';
@@ -46,7 +46,6 @@ export async function generateWithGemini(opts: GenerateOptions): Promise<string>
 
   const generationConfig: Record<string, unknown> = {
     maxOutputTokens: opts.maxOutputTokens ?? 8192,
-    thinkingConfig: { thinkingLevel: process.env.GEMINI_THINKING_LEVEL || 'low' },
   };
   if (opts.temperature !== undefined) generationConfig.temperature = opts.temperature;
   if (opts.responseSchema) {
@@ -54,7 +53,7 @@ export async function generateWithGemini(opts: GenerateOptions): Promise<string>
     generationConfig.responseSchema = opts.responseSchema;
   }
 
-  const candidateModels = Array.from(new Set([GEMINI_MODEL, 'gemini-3.7-flash', 'gemini-1.5-flash']));
+  const candidateModels = Array.from(new Set([GEMINI_MODEL, 'gemini-1.5-flash-8b']));
   let lastErr: GeminiError | null = null;
 
   for (const model of candidateModels) {
