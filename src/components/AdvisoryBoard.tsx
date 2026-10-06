@@ -85,9 +85,9 @@ export const AdvisoryBoard: React.FC<AdvisoryBoardProps> = ({
         })
       });
       const data = await res.json();
-      return data?.replyText || 'Estou acompanhando a discussão!';
+      return data?.replyText || `Na minha visão de ${adv.role}: sobre "${promptText}", precisamos analisar os riscos. ${adv.signatureQuestion}`;
     } catch {
-      return 'Concordo com a análise e sigo acompanhando o planejamento.';
+      return `Como ${adv.role}: sobre "${promptText}", precisamos garantir que isso faz sentido tático. ${adv.signatureQuestion}`;
     }
   };
 
