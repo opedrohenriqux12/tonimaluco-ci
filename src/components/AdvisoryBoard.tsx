@@ -71,7 +71,27 @@ export const AdvisoryBoard: React.FC<AdvisoryBoardProps> = ({
     }
   };
 
-  const handleSendMessage = () => {
+  const fetchAdvisorResponse = async (adv: AdvisoryMember, promptText: string) => {
+    try {
+      const res = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          promptText,
+          advisorName: adv.name,
+          advisorRole: adv.role,
+          personality: adv.personality,
+          signatureQuestion: adv.signatureQuestion,
+        })
+      });
+      const data = await res.json();
+      return data?.replyText || 'Estou acompanhando a discussão!';
+    } catch {
+      return 'Concordo com a análise e sigo acompanhando o planejamento.';
+    }
+  };
+
+  const handleSendMessage = async () => {
     if (!inputMessage.trim()) return;
 
     const userText = inputMessage;
@@ -81,58 +101,55 @@ export const AdvisoryBoard: React.FC<AdvisoryBoardProps> = ({
     setInputMessage('');
 
     if (chatMode === 'todos') {
-      // Send message to "Todos" channel
       setMessages((prev) => ({
         ...prev,
         todos: [...prev.todos, userMsgObj]
       }));
 
-      // All 7 advisors respond in sequence
-      setTimeout(() => {
-        const answers = generateDynamicCouncilAnswers(userText, productContext);
-        const botAnswers = answers.map((ans) => ({
-          sender: ans.advisorName,
-          text: ans.answerText,
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          color: ans.color
-        }));
+      // Fetch live AI responses for all 7 advisors
+      const botAnswers = await Promise.all(
+        MOCK_ADVISORS.map(async (adv) => {
+          const liveText = await fetchAdvisorResponse(adv, userText);
+          return {
+            sender: adv.name,
+            text: liveText,
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            color: adv.color
+          };
+        })
+      );
 
-        setMessages((prev) => ({
-          ...prev,
-          todos: [...prev.todos, ...botAnswers]
-        }));
-      }, 700);
+      setMessages((prev) => ({
+        ...prev,
+        todos: [...prev.todos, ...botAnswers]
+      }));
 
     } else if (chatMode === 'war_room') {
-      // Send message to "War Room" channel
       setMessages((prev) => ({
         ...prev,
         war_room: [...prev.war_room, userMsgObj]
       }));
 
-      // Only selected War Room advisors respond
-      setTimeout(() => {
-        const answers = generateDynamicCouncilAnswers(userText, productContext);
-        const selectedAdvisors = MOCK_ADVISORS.filter((adv) => warRoomAdvisorIds.includes(adv.id));
+      const selectedAdvisors = MOCK_ADVISORS.filter((adv) => warRoomAdvisorIds.includes(adv.id));
 
-        const warRoomResponses = selectedAdvisors.map((adv) => {
-          const ans = answers.find((a) => a.advisorName.includes(adv.name.split(' ')[0])) || answers[0];
+      const warRoomResponses = await Promise.all(
+        selectedAdvisors.map(async (adv) => {
+          const liveText = await fetchAdvisorResponse(adv, userText);
           return {
             sender: adv.name,
-            text: ans.answerText,
+            text: liveText,
             time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             color: adv.color
           };
-        });
+        })
+      );
 
-        setMessages((prev) => ({
-          ...prev,
-          war_room: [...prev.war_room, ...warRoomResponses]
-        }));
-      }, 700);
+      setMessages((prev) => ({
+        ...prev,
+        war_room: [...prev.war_room, ...warRoomResponses]
+      }));
 
     } else if (chatMode === 'individual') {
-      // Send message to 1-on-1 advisor channel
       const selectedAdv = MOCK_ADVISORS.find((a) => a.id === selectedAdvisorId) || MOCK_ADVISORS[0];
       const currentAdvChat = messages.individual[selectedAdvisorId] || [];
 
@@ -144,26 +161,23 @@ export const AdvisoryBoard: React.FC<AdvisoryBoardProps> = ({
         }
       }));
 
-      setTimeout(() => {
-        const answers = generateDynamicCouncilAnswers(userText, productContext);
-        const ans = answers.find((a) => a.advisorName.includes(selectedAdv.name.split(' ')[0])) || answers[0];
+      const liveText = await fetchAdvisorResponse(selectedAdv, userText);
 
-        setMessages((prev) => ({
-          ...prev,
-          individual: {
-            ...prev.individual,
-            [selectedAdvisorId]: [
-              ...(prev.individual[selectedAdvisorId] || []),
-              {
-                sender: selectedAdv.name,
-                text: ans.answerText,
-                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                color: selectedAdv.color
-              }
-            ]
-          }
-        }));
-      }, 700);
+      setMessages((prev) => ({
+        ...prev,
+        individual: {
+          ...prev.individual,
+          [selectedAdvisorId]: [
+            ...(prev.individual[selectedAdvisorId] || []),
+            {
+              sender: selectedAdv.name,
+              text: liveText,
+              time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              color: selectedAdv.color
+            }
+          ]
+        }
+      }));
     }
   };
 
